@@ -1,13 +1,14 @@
 [project]
-name = "generic-template-bootstrap"
+name = "automated-manager"
 version = "1.0.0"
-description = "Bootstrap script for generic template project"
-authors = [{ name = "Templ Project" }]
+description = "The Automated Manager - tooling suite for team leads. First tool: Slack daily summary."
+authors = [{ name = "Dragos Cirjan" }]
 license = { text = "MIT" }
 requires-python = ">=3.11"
+dependencies = ["slack-sdk>=3.27.0", "pydantic-settings>=2.2.0", "python-dotenv>=1.0.0", "typer>=0.12.0"]
 
 [project.scripts]
-bootstrap = "_uvx_install.bootstrap:main"
+am = "automated_manager.cli:app"
 
 [project.optional-dependencies]
 docs = ["mkdocs>=1.5.0", "mkdocs-material>=9.5.0", "mkdocstrings[python]>=0.24.0"]
@@ -17,7 +18,7 @@ build-backend = "hatchling.build"
 requires = ["hatchling"]
 
 [tool.hatch.build.targets.wheel]
-packages = ["_uvx_install"]
+packages = ["src/automated_manager"]
 
 [dependency-groups]
 dev = [
@@ -28,6 +29,7 @@ dev = [
   "mypy>=1.10.0",
   "pylint>=3.0.0",
   "pytest>=8.0.0",
+  "pytest-cov>=5.0.0",
   "ruff>=0.4.0",
 ]
 
@@ -38,8 +40,7 @@ dev = [
 [tool.black]
 extend-exclude = '''
 /(
-  _uvx_install
-  | .jscpd
+  .jscpd
   | .venv
   | build
   | coverage
@@ -59,7 +60,7 @@ target-version = ["py311"]
 [tool.mypy]
 check_untyped_defs = true
 disallow_untyped_defs = false # Gradual typing
-exclude = [".jscpd", ".venv", "_uvx_install", "build", "coverage", "dist", "docs-html", "node_modules"]
+exclude = [".jscpd", ".venv", "build", "coverage", "dist", "docs-html", "node_modules"]
 ignore_missing_imports = true
 python_version = "3.11"
 warn_return_any = true
@@ -76,7 +77,7 @@ attr-rgx = "[a-z_][a-z0-9_]{0,50}$"
 class-rgx = "[A-Z_][a-zA-Z0-9]+$"
 const-rgx = "(([A-Z_][A-Z0-9_]*)|(__.*__))$"
 function-rgx = "[a-z_][a-z0-9_]{2,50}$"
-good-names = ["_", "f", "fd", "i", "id", "ip", "j", "k", "ok", "x", "y", "z"]
+good-names = ["_", "f", "fd", "i", "id", "ip", "j", "k", "ok", "ts", "tz", "x", "y", "z"]
 method-rgx = "[a-z_][a-z0-9_]{2,50}$"
 module-rgx = "[a-z_][a-z0-9_]*$"
 variable-rgx = "[a-z_][a-z0-9_]{0,50}$"
@@ -93,11 +94,11 @@ indent-string = "    "
 max-line-length = 88
 
 [tool.pylint.main]
-ignore = [".jscpd", ".venv", "_uvx_install", "build", "coverage", "dist", "docs-html", "node_modules"]
+ignore = [".jscpd", ".venv", "build", "coverage", "dist", "docs-html", "node_modules", "tests"]
 ignore-patterns = ["^\\."]
 jobs = 0
 py-version = "3.11"
-source-roots = [".scripts", "src"]
+source-roots = ["src"]
 
 [tool.pylint.messages_control]
 disable = ["fixme", "import-error", "line-too-long", "too-few-public-methods"]
@@ -118,14 +119,14 @@ generated-members = []
 addopts = "-v --tb=short"
 python_files = ["*_test.py", "test_*.py"]
 python_functions = ["test_*"]
-testpaths = [".scripts", "tests"]
+testpaths = ["tests"]
 
 # =============================================================================
 # Ruff Configuration
 # =============================================================================
 
 [tool.ruff]
-exclude = [".jscpd", ".venv", "_uvx_install", "build", "coverage", "dist", "docs-html", "node_modules"]
+exclude = [".jscpd", ".venv", "build", "coverage", "dist", "docs-html", "node_modules"]
 line-length = 88
 target-version = "py311"
 
@@ -143,4 +144,4 @@ select = [
 ]
 
 [tool.ruff.lint.isort]
-known-first-party = ["_uvx_install"]
+known-first-party = ["automated_manager"]

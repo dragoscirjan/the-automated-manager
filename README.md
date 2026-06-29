@@ -1,303 +1,225 @@
-# Generic Shell Script Template
+# The Automated Manager
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![CI](https://github.com/templ-project/generic/actions/workflows/ci.yml/badge.svg)](https://github.com/templ-project/generic/actions/workflows/ci.yml)
-[![Contributions welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat)](https://github.com/templ-project/generic/issues)
+[![CI](https://github.com/dragoscirjan/the-automated-manager/actions/workflows/ci.yml/badge.svg)](https://github.com/dragoscirjan/the-automated-manager/actions/workflows/ci.yml)
 
-> A modern, cross-platform template for Bash and PowerShell script projects with comprehensive tooling, testing, linting, and CI/CD built-in.
+A growing suite of automation tools for team leads and engineering managers.
 
-- [Generic Shell Script Template](#generic-shell-script-template)
-  - [Quick Start](#quick-start)
-  - [What's Included](#whats-included)
-  - [Common Commands](#common-commands)
-  - [Requirements](#requirements)
-  - [Setup Development Environment](#setup-development-environment)
-  - [Project Structure](#project-structure)
-  - [Testing](#testing)
-    - [Bash Tests (Bats)](#bash-tests-bats)
-    - [PowerShell Tests (Pester)](#powershell-tests-pester)
-  - [Code Quality](#code-quality)
-    - [Pre-commit Hooks](#pre-commit-hooks)
-  - [Configuration](#configuration)
-  - [Using as a Library](#using-as-a-library)
-    - [Bash](#bash)
-    - [PowerShell](#powershell)
-  - [CI/CD Pipeline](#cicd-pipeline)
-  - [License](#license)
-  - [Support](#support)
+The first tool, **`slack-summary`**, pulls every Slack conversation you can see
+over a time window (default: the last 24 hours), exports it to Markdown, and
+hands it to an LLM **agent CLI** (OpenCode, Claude Code, Pi, or GitHub Copilot
+CLI) to produce an executive summary of what happened.
 
-## Quick Start
+> No LLM API keys are required — the tool shells out to whichever agent CLI you
+> already have installed. If you don't pick a provider, it writes a ready-to-use
+> prompt instead, so you can paste it into any assistant yourself.
 
-**Bootstrap a new project:**
+---
 
-```bash
-# Bootstrap in current directory
-uvx --from git+https://github.com/templ-project/generic.git bootstrap .
+## Table of Contents
 
-# Bootstrap in specific directory
-uvx --from git+https://github.com/templ-project/generic.git bootstrap ./my-project
+- [Requirements](#requirements)
+- [Quick Start](#quick-start)
+- [Creating a Slack App & User Token](#creating-a-slack-app--user-token)
+- [Configuration](#configuration)
+- [Usage](#usage)
+- [How It Works](#how-it-works)
+- [Output Layout](#output-layout)
+- [Development](#development)
+- [License](#license)
 
-# Bootstrap with custom project name
-uvx --from git+https://github.com/templ-project/generic.git bootstrap --project-name my-awesome-project ./target-dir
-```
-
-**After bootstrapping:**
-
-```bash
-cd my-project
-git init
-task deps:sync        # Install all dependencies (mise, npm, uv)
-git add .
-git commit -m "Initial commit"
-```
-
-That's it! You now have a fully configured shell script project.
-
-## What's Included
-
-| Feature                 | Tool                                                                                              | Description                           |
-| ----------------------- | ------------------------------------------------------------------------------------------------- | ------------------------------------- |
-| **Languages**           | Bash + PowerShell                                                                                 | Cross-platform shell scripting        |
-| **Task Runner**         | [Taskfile](https://taskfile.dev/)                                                                 | Modern build automation               |
-| **Tool Management**     | [mise](https://mise.jdx.dev/)                                                                     | Isolated development environment      |
-| **Shell Linting**       | [ShellCheck](https://www.shellcheck.net/)                                                         | Bash/sh static analysis with auto-fix |
-| **PowerShell Linting**  | [PSScriptAnalyzer](https://github.com/PowerShell/PSScriptAnalyzer)                                | PowerShell best practices             |
-| **Python Linting**      | [Pylint](https://pylint.org/) + [Ruff](https://docs.astral.sh/ruff/)                              | For helper scripts                    |
-| **Code Formatting**     | [Prettier](https://prettier.io/)                                                                  | JSON, YAML, Markdown formatting       |
-| **Bash Testing**        | [Bats-core](https://github.com/bats-core/bats-core)                                               | Bash Automated Testing System         |
-| **PowerShell Testing**  | [Pester](https://pester.dev/)                                                                     | PowerShell testing framework          |
-| **Pre-commit Hooks**    | [Husky](https://typicode.github.io/husky/) + [lint-staged](https://github.com/okonet/lint-staged) | Automatic validation                  |
-| **Duplicate Detection** | [jscpd](https://github.com/kucherenko/jscpd)                                                      | Copy-paste detector                   |
-| **Documentation**       | [MkDocs](https://www.mkdocs.org/)                                                                 | Material theme docs                   |
-| **CI/CD**               | GitHub Actions                                                                                    | Multi-platform testing & releases     |
-
-## Common Commands
-
-```bash
-# === Development ===
-task run                 # Run the CLI script
-task build               # Build/validate project
-
-# === Code Formatting ===
-task format              # Format all code (Prettier, Ruff)
-task format:check        # Check formatting without fixing
-
-# === Linting ===
-task lint                # Lint all code (ESLint, Pylint, ShellCheck, PSScriptAnalyzer)
-task lint:check          # Check all without fixing
-task lint:shlint         # Lint bash scripts only
-task lint:pwshlint       # Lint PowerShell scripts only
-
-# === Testing ===
-task test                # Run all tests (Bats + Pester)
-task test:bats           # Run Bash tests only
-task test:pester         # Run PowerShell tests only
-
-# === Code Quality ===
-task duplicate-check     # Check for duplicate code
-
-# === Documentation ===
-task docs                # Build documentation
-task docs:serve          # Serve documentation locally
-
-# === Full Validation ===
-task validate            # Run complete CI pipeline locally
-
-# === Dependencies ===
-task deps:sync           # Install all dependencies
-task deps:refresh        # Update all dependencies
-task deps:clean          # Remove all dependencies
-```
+---
 
 ## Requirements
 
-- [mise](https://mise.jdx.dev/) - Tool version management (installs everything else)
-- [Task](https://taskfile.dev/) - Task runner (can be installed via mise or standalone)
+- **Python 3.11+**
+- A Slack **user** OAuth token (`xoxp-…`) — see
+  [Creating a Slack App & User Token](#creating-a-slack-app--user-token).
+- _(Optional, for automatic summaries)_ one installed agent CLI:
+  [`opencode`](https://opencode.ai), [`claude`](https://code.claude.com),
+  [`pi`](https://pi.dev), or [`copilot`](https://github.com/github/copilot-cli).
 
-**Automatically installed via mise:**
+The tool can be run with [`uvx`](https://docs.astral.sh/uv/) without a manual
+install.
 
-- Node.js 22 (for ESLint, Prettier, jscpd)
-- Python 3.11+ (for linting scripts, docs)
-- ShellCheck (bash linting)
-- PowerShell Core (cross-platform PowerShell)
+---
 
-## Setup Development Environment
-
-```bash
-# Install mise (if not already installed)
-# Linux/macOS:
-curl https://mise.run | sh
-
-# Windows (PowerShell):
-winget install jdx.mise
-# or: choco install mise
-
-# Install Task runner
-# https://taskfile.dev/installation/
-
-# Clone and setup
-git clone https://github.com/templ-project/generic.git my-project
-cd my-project
-
-# Install all dependencies
-task deps:sync
-
-# Verify setup
-task validate
-```
-
-## Project Structure
-
-```text
-├── .github/
-│   └── workflows/        # CI/CD pipelines
-│       ├── ci.yml        # Main CI orchestrator
-│       ├── ci.quality.yml# Lint, test, build jobs
-│       ├── ci.release.yml# GitHub release publishing
-│       └── ci.version.yml# Semantic versioning (Bumpalicious)
-├── .scripts/             # Build/lint helper scripts
-│   ├── shlint.py         # ShellCheck wrapper with auto-fix
-│   ├── pwshlint.py       # PSScriptAnalyzer wrapper
-│   ├── run-pester.ps1    # Pester test runner
-│   └── fix-mise-pwsh.*   # mise PowerShell installation fix
-├── .taskfiles/           # Shared Taskfile modules
-├── src/                  # Source scripts
-│   ├── cli.sh            # Bash CLI entrypoint
-│   ├── cli.ps1           # PowerShell CLI entrypoint
-│   ├── greeter.sh        # Bash library module
-│   └── greeter.ps1       # PowerShell library module
-├── test/                 # Test files
-│   ├── greeter.test.bats # Bash tests (Bats)
-│   └── greeter.Tests.ps1 # PowerShell tests (Pester)
-├── docs/                 # Documentation source
-├── _uvx_install/         # Bootstrap script (for uvx)
-├── Taskfile.yml          # Task definitions
-├── .mise.toml            # Tool versions & hooks
-├── package.json          # Node.js dev dependencies
-├── pyproject.toml        # Python config & dependencies
-└── VERSION               # Project version (semver)
-```
-
-## Testing
-
-### Bash Tests (Bats)
-
-Tests are in `test/*.bats`:
+## Quick Start
 
 ```bash
-# test/greeter.test.bats
-@test "hello returns greeting" {
-  source src/greeter.sh
-  result="$(hello "World")"
-  [ "$result" = "Hello, World!" ]
-}
+# 1. Export your Slack user token (or put it in a .env file — see below)
+export SLACK_USER_TOKEN="xoxp-your-token-here"
+
+# 2. Generate a ready-to-paste prompt for the last 24 hours (no provider)
+uvx --from git+https://github.com/dragoscirjan/the-automated-manager.git \
+  am slack-summary
+
+# 3. Or let an installed agent CLI write the summary for you
+uvx --from git+https://github.com/dragoscirjan/the-automated-manager.git \
+  am slack-summary --provider opencode
 ```
 
-Run with: `task test:bats`
+---
 
-### PowerShell Tests (Pester)
+## Creating a Slack App & User Token
 
-Tests are in `test/*.Tests.ps1`:
+The tool needs a **user token** (`xoxp-`) so it can read every channel and DM
+_you_ can see. Bot tokens only see channels the bot is invited to, which is why
+a user token is required.
 
-```powershell
-# test/greeter.Tests.ps1
-Describe "Hello function" {
-    It "Returns greeting" {
-        . src/greeter.ps1
-        Hello -Name "World" | Should -Be "Hello, World!"
-    }
-}
-```
+1. Go to **<https://api.slack.com/apps>** and click **Create New App** →
+   **From scratch**.
+2. Give it a name (e.g. _Automated Manager_) and pick your workspace.
+3. In the left sidebar, open **OAuth & Permissions**.
+4. Scroll to **Scopes → User Token Scopes** and add **all** of the following:
 
-Run with: `task test:pester`
+   | Scope              | Why                               |
+   | ------------------ | --------------------------------- |
+   | `channels:read`    | List public channels              |
+   | `groups:read`      | List private channels             |
+   | `im:read`          | List direct messages              |
+   | `mpim:read`        | List group direct messages        |
+   | `channels:history` | Read public channel messages      |
+   | `groups:history`   | Read private channel messages     |
+   | `im:history`       | Read direct messages              |
+   | `mpim:history`     | Read group direct messages        |
+   | `users:read`       | Resolve user IDs to display names |
 
-## Code Quality
+5. Scroll back up and click **Install to Workspace**, then **Allow**.
+6. Copy the **User OAuth Token** — it starts with `xoxp-`. This is your
+   `SLACK_USER_TOKEN`.
 
-### Pre-commit Hooks
+> **Keep this token secret.** It grants read access to everything you can see in
+> Slack. Store it in an environment variable or a `.env` file that is never
+> committed (this repo's `.gitignore` already excludes `.env`).
 
-Automatic validation via Husky + lint-staged:
-
-| File Type                 | Tools Run           |
-| ------------------------- | ------------------- |
-| `*.sh`, `*.bats`          | ShellCheck          |
-| `*.ps1`                   | PSScriptAnalyzer    |
-| `*.py`                    | Ruff format, Pylint |
-| `*.json`, `*.yml`, `*.md` | Prettier, ESLint    |
-
-Configure in:
-
-- `.husky/pre-commit` - Hook script
-- `.lintstagedrc.yml` - File patterns and commands
+---
 
 ## Configuration
 
-| File                             | Purpose                                              |
-| -------------------------------- | ---------------------------------------------------- |
-| `.mise.toml`                     | Tool versions (Node, Python, ShellCheck, PowerShell) |
-| `Taskfile.yml`                   | Task definitions                                     |
-| `.shellcheckrc`                  | ShellCheck rules                                     |
-| `.PSScriptAnalyzerSettings.psd1` | PSScriptAnalyzer rules                               |
-| `pyproject.toml`                 | Python tools (Pylint, Ruff, Black)                   |
-| `eslint.config.mjs`              | ESLint config (uses `@templ-project/eslint`)         |
-| `prettier.config.mjs`            | Prettier config (uses `@templ-project/prettier`)     |
-| `.jscpd.json`                    | Duplicate detection settings                         |
+Configuration is read from environment variables, optionally seeded by a `.env`
+file. The tool searches for `.env` by walking **up** from your current working
+directory, so you can keep a per-project `.env`.
 
-## Using as a Library
+Create a `.env` next to where you run the tool:
 
-### Bash
+```dotenv
+# Required: your Slack user OAuth token
+SLACK_USER_TOKEN=xoxp-your-token-here
 
-Source the library modules in your scripts:
+# Optional: default agent CLI provider (opencode | claude | pi | copilot).
+# If unset, the tool runs in prompt-only mode.
+LLM_PROVIDER=opencode
+
+# Optional: model passed through to the agent CLI (provider-specific).
+LLM_MODEL=
+
+# Optional: IANA timezone used for timestamps and the period label.
+# Defaults to the system local timezone.
+AM_TIMEZONE=Europe/Bucharest
+```
+
+| Variable           | Required | Description                                              |
+| ------------------ | -------- | -------------------------------------------------------- |
+| `SLACK_USER_TOKEN` | yes      | Slack user OAuth token (`xoxp-…`).                       |
+| `LLM_PROVIDER`     | no       | Default provider: `opencode`, `claude`, `pi`, `copilot`. |
+| `LLM_MODEL`        | no       | Model name forwarded to the agent CLI via `--model`.     |
+| `AM_TIMEZONE`      | no       | IANA timezone (e.g. `America/New_York`).                 |
+
+---
+
+## Usage
+
+```text
+am slack-summary [OPTIONS]
+
+Options:
+  -s, --since TEXT       Time window to summarize, as Nh or Nd (max 10 days).
+                         [default: 24h]
+  -p, --provider TEXT    Agent CLI to run: opencode | claude | pi | copilot.
+                         Overrides LLM_PROVIDER. If omitted and no env default,
+                         runs in prompt-only mode.
+  -o, --output PATH      Where to write the summary (run mode).
+                         [default: summaries/slack-<period>.md]
+```
+
+Examples:
 
 ```bash
-#!/usr/bin/env bash
+# Last 24 hours, prompt-only (default)
+am slack-summary
 
-# Source the greeter module
-source /path/to/src/greeter.sh
+# Last 3 days, summarized by Claude Code
+am slack-summary --since 3d --provider claude
 
-# Use the functions
-message=$(hello "World")
-echo "$message"  # "Hello, World!"
+# Last 12 hours to a custom file via OpenCode
+am slack-summary -s 12h -p opencode -o reports/today.md
 ```
 
-### PowerShell
+### Two modes
 
-Dot-source the library modules in your scripts:
+- **Prompt-only (default).** When no provider is set, the tool exports your
+  Slack data and writes a self-contained prompt to
+  `summaries/.slack-<period>.prompt.md`. Paste it into any assistant.
+- **Run mode.** With `--provider` (or `LLM_PROVIDER`), the tool inlines the
+  exported data into the prompt, runs the agent CLI, captures its output, and
+  writes the finished summary to the `--output` path.
 
-```powershell
-#!/usr/bin/env pwsh
+The time window accepts `Nh` (hours) or `Nd` (days), e.g. `24h`, `12h`, `7d`.
+The maximum span is **10 days**.
 
-# Dot-source the greeter module
-. /path/to/src/greeter.ps1
+---
 
-# Use the functions
-$message = Hello -Name "World"
-Write-Output $message  # "Hello, World!"
+## How It Works
+
+1. Resolve the time window and timezone.
+2. List every conversation you can see (public + private channels, DMs, and
+   group DMs), skipping archived and empty ones.
+3. Fetch messages and thread replies within the window, resolving user mentions
+   to display names. Rate limits are retried automatically.
+4. Render each conversation to Markdown under `slack/<period>/`.
+5. Either build a prompt (prompt-only) or run your chosen agent CLI and write
+   the summary (run mode).
+
+---
+
+## Output Layout
+
+```text
+.
+├── slack/
+│   └── 2026-06-29/                  # period label (single day or range)
+│       ├── channel-general.md
+│       ├── channel-incidents.md
+│       └── dm-jane-doe.md
+└── summaries/
+    ├── slack-2026-06-29.md          # run mode: the finished summary
+    └── .slack-2026-06-29.prompt.md  # prompt-only mode: paste-ready prompt
 ```
 
-## CI/CD Pipeline
+The period label is `YYYY-MM-DD` for a single day, or
+`YYYY-MM-DD-YYYY-MM-DD` for a multi-day window.
 
-The GitHub Actions pipeline runs on **Linux, macOS, and Windows**:
+---
 
-| Workflow         | Trigger                 | Jobs                                                                               |
-| ---------------- | ----------------------- | ---------------------------------------------------------------------------------- |
-| `ci.yml`         | Push/PR to main/develop | Matrix orchestrator                                                                |
-| `ci.quality.yml` | Called by ci.yml        | lint, test, build, duplicate-check                                                 |
-| `ci.version.yml` | Push to main            | Semantic version bump ([Bumpalicious](https://github.com/dragoscops/bumpalicious)) |
-| `ci.release.yml` | After version bump      | Create GitHub release with archives                                                |
+## Development
 
-**Release artifacts:**
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for the full developer workflow.
 
-- `{project}-{version}.tar.gz` - Unix archive
-- `{project}-{version}.zip` - Windows archive
+```bash
+# Install toolchain (mise: python, node, uv) and dependencies
+mise install
+mise exec -- uv sync
 
-Both contain the `src/` scripts, `README.md`, and `LICENSE`.
+# Run the test suite
+mise exec -- uv run pytest -q
+
+# Lint, format, build, test — the full gate
+task validate
+```
+
+---
 
 ## License
 
-MIT © [Templ Project](https://github.com/templ-project)
-
-## Support
-
-- [Report Issues](https://github.com/templ-project/generic/issues)
-- [Documentation](https://templ-project.github.io/generic/)
-- [Star on GitHub](https://github.com/templ-project/generic)
+[MIT](./LICENSE) © Dragos Cirjan

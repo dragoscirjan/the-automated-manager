@@ -55,16 +55,12 @@ tasks:
       Runs all linters in sequence with auto-fix enabled:
         - ESLint for JSON, YAML, Markdown
         - Pylint for Python files
-        - PSScriptAnalyzer for PowerShell files
-        - ShellCheck for shell scripts
 
       Examples:
         task lint
     cmds:
       - task: lint:eslint
       - task: lint:pylint
-      - task: lint:pwshlint
-      - task: lint:shlint
       - cmd: echo "✅ Linting completed"
 
   lint:check:
@@ -80,8 +76,6 @@ tasks:
     cmds:
       - task: lint:check:eslint
       - task: lint:check:pylint
-      - task: lint:check:pwshlint
-      - task: lint:check:shlint
       - cmd: echo "✅ Linting check completed"
 
   lint-staged:
@@ -342,131 +336,6 @@ tasks:
     cmds:
       - task: lint:pylint
       - echo "- ✅ pylint lint check completed"
-    silent: true
-
-  # ==========================================================================
-  # PSScriptAnalyzer (PowerShell Linting)
-  # ==========================================================================
-
-  pwshlint_py:
-    desc: 'Run PSScriptAnalyzer'
-    summary: |
-      Run PSScriptAnalyzer with custom arguments
-
-      Internal task for running PSScriptAnalyzer via Python wrapper.
-      Use lint:pwshlint instead.
-
-      Variables:
-        CLI_ARGS: Arguments to pass to pwshlint.py
-
-      Examples:
-        task pwshlint_py CLI_ARGS="--fix"
-    cmds:
-      - |
-        {{.__TF_MISE_E_UV_RUN}} .scripts/pwshlint.py {{.CLI_ARGS}}
-    silent: true
-    sources:
-      - '**/*.ps1'
-
-  lint:pwshlint:
-    aliases: [lint:pwsh]
-    desc: 'Lint PowerShell scripts using PSScriptAnalyzer'
-    summary: |
-      Lint PowerShell scripts using PSScriptAnalyzer
-
-      Runs PSScriptAnalyzer with auto-fix on all PowerShell scripts.
-
-      Aliases: lint:pwsh
-
-      Examples:
-        task lint:pwshlint
-        task lint:pwsh
-    cmds:
-      - task: pwshlint_py
-        vars:
-          CLI_ARGS: '--fix'
-      - echo "- ✅ pwsh lint completed"
-    silent: true
-
-  lint:check:pwshlint:
-    aliases: [lint:check:pwsh]
-    desc: 'Check PowerShell scripts using PSScriptAnalyzer'
-    summary: |
-      Check PowerShell scripts without fixing
-
-      Analyzes PowerShell files and reports issues.
-
-      Aliases: lint:check:pwsh
-
-      Examples:
-        task lint:check:pwshlint
-        task lint:check:pwsh
-    cmds:
-      - task: pwshlint_py
-      - echo "- ✅ pwsh lint completed"
-    silent: true
-
-  # ==========================================================================
-  # ShellCheck (Shell Script Linting)
-  # ==========================================================================
-
-  shlint_py:
-    desc: 'Run ShellCheck'
-    summary: |
-      Run ShellCheck with custom arguments
-
-      Internal task for running ShellCheck via Python wrapper.
-      Use lint:shlint instead.
-
-      Variables:
-        CLI_ARGS: Arguments to pass to shlint.py
-
-      Examples:
-        task shlint_py CLI_ARGS="--fix"
-    cmds:
-      - cmd: |
-          {{.__TF_MISE_E}} python .scripts/shlint.py {{.CLI_ARGS}}
-        platforms: [darwin, linux, windows]
-    silent: true
-    sources:
-      - '**/*.sh'
-
-  lint:shlint:
-    aliases: [lint:bash, lint:sh]
-    desc: 'Lint shell scripts using ShellCheck'
-    summary: |
-      Lint shell scripts using ShellCheck
-
-      Runs ShellCheck with auto-fix on all Bash/shell scripts.
-
-      Aliases: lint:sh, lint:bash
-
-      Examples:
-        task lint:shlint
-        task lint:bash
-    cmds:
-      - task: shlint_py
-        vars:
-          CLI_ARGS: '--fix'
-      - echo "- ✅ bash lint completed"
-    silent: true
-
-  lint:check:shlint:
-    aliases: [lint:check:bash, lint:check:sh]
-    desc: 'Check shell scripts using ShellCheck'
-    summary: |
-      Check shell scripts without fixing
-
-      Analyzes shell scripts and reports issues.
-
-      Aliases: lint:check:sh, lint:check:bash
-
-      Examples:
-        task lint:check:shlint
-        task lint:check:sh
-    cmds:
-      - task: shlint_py
-      - echo "- ✅ bash lint completed"
     silent: true
 
   # ==========================================================================
