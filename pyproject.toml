@@ -5,7 +5,13 @@ description = "The Automated Manager - tooling suite for team leads. First tool:
 authors = [{ name = "Dragos Cirjan" }]
 license = { text = "MIT" }
 requires-python = ">=3.11"
-dependencies = ["slack-sdk>=3.27.0", "pydantic-settings>=2.2.0", "python-dotenv>=1.0.0", "typer>=0.12.0"]
+dependencies = [
+  "slack-sdk>=3.27.0",
+  "pydantic-settings>=2.2.0",
+  "python-dotenv>=1.0.0",
+  "typer>=0.12.0",
+  "tzdata>=2024.1",
+]
 
 [project.scripts]
 am = "automated_manager.cli:app"

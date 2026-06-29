@@ -35,12 +35,12 @@ jobs:
       - uses: actions/checkout@v6
       - name: Install uv
         uses: astral-sh/setup-uv@v7
-      - name: Test bootstrap help
-        run: uvx --from . bootstrap --help
-      - name: Test bootstrap execution
-        run: uvx --from . bootstrap ./test-project
-      - name: Test bootstrap execution (remote)
-        run: uvx --from git+${{ github.server_url }}/${{ github.repository }}.git bootstrap ./test-project-remote
+      - name: Test CLI help (local)
+        run: uvx --from . am --help
+      - name: Test CLI command help (local)
+        run: uvx --from . am slack-summary --help
+      - name: Test CLI help (remote)
+        run: uvx --from git+${{ github.server_url }}/${{ github.repository }}.git am --help
 
   # Validation & Build matrix for different platforms
   # Option A: build,lint,test before version bump (slower, but validates before release)
