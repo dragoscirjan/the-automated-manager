@@ -9,6 +9,8 @@ from typer.testing import CliRunner
 
 from automated_manager import cli as cli_mod
 from automated_manager import __version__
+from automated_manager.discord.render import ExportResult as DiscordExportResult
+from automated_manager.discord_summary import DiscordSummaryResult
 from automated_manager.errors import ConfigError, ValidationError
 from automated_manager.slack.render import ExportResult
 from automated_manager.summarize import SummaryResult
@@ -24,6 +26,19 @@ def _result(mode: str, tmp_path: Path) -> SummaryResult:
         output=tmp_path / "summaries" / "slack-2026-06-29.md",
         conversation_count=2,
         prompt_path=(tmp_path / "summaries" / ".slack-2026-06-29.prompt.md")
+        if mode == "prompt"
+        else None,
+    )
+
+
+def _discord_result(mode: str, tmp_path: Path) -> DiscordSummaryResult:
+    export = DiscordExportResult(folder=tmp_path / "discord" / "2026-06-29", files=())
+    return DiscordSummaryResult(
+        mode=mode,
+        export=export,
+        output=tmp_path / "summaries" / "discord-2026-06-29.md",
+        conversation_count=2,
+        prompt_path=(tmp_path / "summaries" / ".discord-2026-06-29.prompt.md")
         if mode == "prompt"
         else None,
     )
@@ -78,3 +93,34 @@ def test_config_error_exits_1(monkeypatch: pytest.MonkeyPatch) -> None:
     result = runner.invoke(cli_mod.app, ["slack-summary"])
     assert result.exit_code == 1
     assert "no token" in result.stderr
+
+
+def test_discord_summary_prompt_mode(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(cli_mod, "load_settings", lambda: object())
+    monkeypatch.setattr(
+        cli_mod,
+        "run_discord_summary",
+        lambda **kwargs: _discord_result("prompt", tmp_path),
+    )
+    result = runner.invoke(cli_mod.app, ["discord-summary"])
+    assert result.exit_code == 0
+    assert "Prompt written to" in result.stdout
+
+
+def test_discord_summary_run_mode(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(cli_mod, "load_settings", lambda: object())
+    monkeypatch.setattr(
+        cli_mod,
+        "run_discord_summary",
+        lambda **kwargs: _discord_result("run", tmp_path),
+    )
+    result = runner.invoke(
+        cli_mod.app,
+        ["discord-summary", "-p", "opencode", "--include", "guild_text,dm"],
+    )
+    assert result.exit_code == 0
+    assert "Summary written to" in result.stdout

@@ -39,7 +39,12 @@ def find_dotenv(start: Path | None = None) -> Path | None:
 class Settings(BaseSettings):
     """Runtime configuration sourced from the environment / ``.env``."""
 
-    slack_user_token: str = Field(validation_alias="SLACK_USER_TOKEN")
+    slack_user_token: str | None = Field(
+        default=None, validation_alias="SLACK_USER_TOKEN"
+    )
+    discord_bot_token: str | None = Field(
+        default=None, validation_alias="DISCORD_BOT_TOKEN"
+    )
     llm_provider: str | None = Field(default=None, validation_alias="LLM_PROVIDER")
     llm_model: str | None = Field(default=None, validation_alias="LLM_MODEL")
     timezone: str | None = Field(default=None, validation_alias="AM_TIMEZONE")
@@ -61,16 +66,17 @@ def load_settings(start: Path | None = None) -> Settings:
     Returns:
         The populated :class:`Settings` instance.
 
-    Raises:
-        ConfigError: If required settings (e.g. ``SLACK_USER_TOKEN``) are absent.
+    Notes:
+        Token requirements are validated by each command flow (Slack vs Discord)
+        so that users can configure only the provider they actually use.
     """
     env_file = find_dotenv(start)
     try:
         return Settings(_env_file=env_file)  # type: ignore[call-arg]
     except PydanticValidationError as err:
         raise ConfigError(
-            "Invalid configuration. Ensure SLACK_USER_TOKEN is set via an "
-            "environment variable or a .env file in the current directory.\n"
+            "Invalid configuration. Ensure required environment variables are "
+            "set via environment or a .env file in the current directory.\n"
             f"{err}"
         ) from err
 

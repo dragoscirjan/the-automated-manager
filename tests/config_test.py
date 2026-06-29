@@ -30,24 +30,35 @@ def test_find_dotenv_missing(tmp_path: Path) -> None:
 
 def test_load_settings_from_dotenv(tmp_path: Path) -> None:
     (tmp_path / ".env").write_text(
-        "SLACK_USER_TOKEN=xoxp-abc\nLLM_PROVIDER=claude\n", encoding="utf-8"
+        (
+            "SLACK_USER_TOKEN=xoxp-abc\n"
+            "DISCORD_BOT_TOKEN=discord-abc\n"
+            "LLM_PROVIDER=claude\n"
+        ),
+        encoding="utf-8",
     )
     settings = load_settings(tmp_path)
     assert settings.slack_user_token == "xoxp-abc"
+    assert settings.discord_bot_token == "discord-abc"
     assert settings.llm_provider == "claude"
 
 
-def test_load_settings_missing_token_raises(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+def test_load_settings_missing_tokens_allowed_for_command_specific_checks(
+    tmp_path: Path,
 ) -> None:
-    monkeypatch.delenv("SLACK_USER_TOKEN", raising=False)
-    with pytest.raises(ConfigError):
-        load_settings(tmp_path)
+    settings = load_settings(tmp_path)
+    assert settings.slack_user_token is None
+    assert settings.discord_bot_token is None
 
 
 def test_settings_populate_by_name() -> None:
-    settings = Settings(_env_file=None, slack_user_token="xoxp-x")  # type: ignore[call-arg]
+    settings = Settings(  # type: ignore[call-arg]
+        _env_file=None,
+        slack_user_token="xoxp-x",
+        discord_bot_token="discord-x",
+    )
     assert settings.slack_user_token == "xoxp-x"
+    assert settings.discord_bot_token == "discord-x"
 
 
 def test_resolve_timezone_named() -> None:

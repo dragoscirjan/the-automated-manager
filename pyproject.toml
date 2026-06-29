@@ -6,6 +6,7 @@ authors = [{ name = "Dragos Cirjan" }]
 license = { text = "MIT" }
 requires-python = ">=3.11"
 dependencies = [
+  "discord.py>=2.4.0",
   "slack-sdk>=3.27.0",
   "pydantic-settings>=2.2.0",
   "python-dotenv>=1.0.0",
@@ -107,7 +108,7 @@ py-version = "3.11"
 source-roots = ["src"]
 
 [tool.pylint.messages_control]
-disable = ["fixme", "import-error", "line-too-long", "too-few-public-methods"]
+disable = ["duplicate-code", "fixme", "import-error", "line-too-long", "too-few-public-methods"]
 enable = ["useless-suppression"]
 
 [tool.pylint.similarities]

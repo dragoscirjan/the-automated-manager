@@ -15,6 +15,7 @@ from datetime import datetime
 from pathlib import Path
 
 from .config import Settings, resolve_timezone
+from .errors import ConfigError
 from .llm import build_prompt, get_provider
 from .slack import SlackClient, SlackCollector, write_export
 from .slack.render import ExportResult, conversations_to_markdown
@@ -52,6 +53,12 @@ def run_summary(
     Returns:
         A :class:`SummaryResult` describing what was produced.
     """
+    if not settings.slack_user_token:
+        raise ConfigError(
+            "Missing SLACK_USER_TOKEN. Configure it via environment variable "
+            "or a .env file in the current directory."
+        )
+
     tz = resolve_timezone(settings.timezone)
     period = resolve_period(window, datetime.now(tz))
 

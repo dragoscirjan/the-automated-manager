@@ -7,44 +7,18 @@ feed into an LLM agent CLI.
 
 from __future__ import annotations
 
-import re
-from dataclasses import dataclass
-from datetime import datetime, tzinfo
+from datetime import tzinfo
 from pathlib import Path
 
+from ..render_common import ExportResult, format_time, write_conversation_exports
 from ..timeparse import Period
 from .collector import Conversation, SlackMessage
-
-_SLUG_RE = re.compile(r"[^a-z0-9]+")
-
-
-@dataclass(frozen=True)
-class ExportResult:
-    """Outcome of an export: the folder and the files written into it."""
-
-    folder: Path
-    files: tuple[Path, ...]
-
-
-def _slugify(title: str) -> str:
-    """Turn a conversation title into a filesystem-safe slug."""
-    slug = _SLUG_RE.sub("-", title.lower()).strip("-")
-    return slug or "conversation"
-
-
-def _format_time(ts: str, tz: tzinfo) -> str:
-    """Format a Slack epoch timestamp as ``YYYY-MM-DD HH:MM`` in ``tz``."""
-    try:
-        moment = datetime.fromtimestamp(float(ts), tz=tz)
-    except (ValueError, OverflowError):
-        return ts
-    return moment.strftime("%Y-%m-%d %H:%M")
 
 
 def _render_message(message: SlackMessage, tz: tzinfo, indent: str = "") -> list[str]:
     """Render a message (and its replies) as Markdown bullet lines."""
     lines = [
-        f"{indent}- **{message.author}** ({_format_time(message.ts, tz)}): "
+        f"{indent}- **{message.author}** ({format_time(message.ts, tz)}): "
         f"{message.text}"
     ]
     for reply in message.replies:
@@ -94,19 +68,12 @@ def write_export(
     Returns:
         An :class:`ExportResult` with the folder and written file paths.
     """
-    folder = base_dir / "slack" / period.label
-    folder.mkdir(parents=True, exist_ok=True)
-
-    files: list[Path] = []
-    seen: dict[str, int] = {}
-    for conversation in conversations:
-        slug = _slugify(conversation.title)
-        count = seen.get(slug, 0)
-        seen[slug] = count + 1
-        filename = f"{slug}.md" if count == 0 else f"{slug}-{count + 1}.md"
-
-        path = folder / filename
-        path.write_text(conversation_to_markdown(conversation, tz), encoding="utf-8")
-        files.append(path)
-
-    return ExportResult(folder=folder, files=tuple(files))
+    return write_conversation_exports(
+        conversations=conversations,
+        period=period,
+        tz=tz,
+        base_dir=base_dir,
+        prefix="slack",
+        title_of=lambda conversation: conversation.title,
+        markdown_of=conversation_to_markdown,
+    )

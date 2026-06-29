@@ -9,11 +9,15 @@ import pytest
 
 from automated_manager import summarize as summarize_mod
 from automated_manager.config import Settings
+from automated_manager.errors import ConfigError
 from automated_manager.slack.collector import Conversation, SlackMessage
 
 
 def _settings(**overrides: object) -> Settings:
-    data: dict[str, object] = {"slack_user_token": "xoxp-test"}
+    data: dict[str, object] = {
+        "slack_user_token": "xoxp-test",
+        "discord_bot_token": "discord-test",
+    }
     data.update(overrides)
     return Settings(_env_file=None, **data)  # type: ignore[call-arg]
 
@@ -104,3 +108,15 @@ def test_provider_falls_back_to_settings(
         provider_name=None,
     )
     assert captured == {"name": "claude", "model": "sonnet"}
+
+
+def test_missing_slack_token_raises_config_error(tmp_path: Path) -> None:
+    with pytest.raises(ConfigError) as raised:
+        summarize_mod.run_summary(
+            settings=_settings(slack_user_token=None),
+            window="24h",
+            base_dir=tmp_path,
+            output=None,
+            provider_name=None,
+        )
+    assert "SLACK_USER_TOKEN" in str(raised.value)

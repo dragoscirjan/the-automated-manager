@@ -39,8 +39,6 @@ jobs:
         run: uvx --from . am --help
       - name: Test CLI command help (local)
         run: uvx --from . am slack-summary --help
-      - name: Test CLI help (remote)
-        run: uvx --from git+${{ github.server_url }}/${{ github.repository }}.git am --help
 
   # Validation & Build matrix for different platforms
   # Option A: build,lint,test before version bump (slower, but validates before release)

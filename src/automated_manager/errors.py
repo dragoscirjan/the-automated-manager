@@ -24,5 +24,9 @@ class SlackCollectionError(AutomatedManagerError):
     """Raised when collecting data from the Slack API fails."""
 
 
+class DiscordCollectionError(AutomatedManagerError):
+    """Raised when collecting data from the Discord API fails."""
+
+
 class ProviderError(AutomatedManagerError):
     """Raised when an LLM agent-CLI provider fails to produce a summary."""

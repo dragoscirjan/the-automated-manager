@@ -5,221 +5,135 @@
 
 A growing suite of automation tools for team leads and engineering managers.
 
-The first tool, **`slack-summary`**, pulls every Slack conversation you can see
-over a time window (default: the last 24 hours), exports it to Markdown, and
-hands it to an LLM **agent CLI** (OpenCode, Claude Code, Pi, or GitHub Copilot
-CLI) to produce an executive summary of what happened.
+Current commands:
 
-> No LLM API keys are required — the tool shells out to whichever agent CLI you
-> already have installed. If you don't pick a provider, it writes a ready-to-use
-> prompt instead, so you can paste it into any assistant yourself.
+- `am slack-summary` (Slack user-token workflow)
+- `am discord-summary` (Discord bot-token workflow)
 
----
+Both commands collect messages for a time window, export one Markdown file per
+conversation, then either:
 
-## Table of Contents
-
-- [Requirements](#requirements)
-- [Quick Start](#quick-start)
-- [Creating a Slack App & User Token](#creating-a-slack-app--user-token)
-- [Configuration](#configuration)
-- [Usage](#usage)
-- [How It Works](#how-it-works)
-- [Output Layout](#output-layout)
-- [Development](#development)
-- [License](#license)
-
----
+- write a ready-to-paste prompt (default), or
+- run an installed agent CLI (`opencode`, `claude`, `pi`, `copilot`) and write
+  the final summary.
 
 ## Requirements
 
-- **Python 3.11+**
-- A Slack **user** OAuth token (`xoxp-…`) — see
-  [Creating a Slack App & User Token](#creating-a-slack-app--user-token).
-- _(Optional, for automatic summaries)_ one installed agent CLI:
-  [`opencode`](https://opencode.ai), [`claude`](https://code.claude.com),
-  [`pi`](https://pi.dev), or [`copilot`](https://github.com/github/copilot-cli).
-
-The tool can be run with [`uvx`](https://docs.astral.sh/uv/) without a manual
-install.
-
----
+- Python 3.11+
+- Slack user OAuth token (`xoxp-...`) for `slack-summary`
+- Discord bot token for `discord-summary`
+- Optional agent CLI for run mode (`opencode`, `claude`, `pi`, `copilot`)
 
 ## Quick Start
 
 ```bash
-# 1. Export your Slack user token (or put it in a .env file — see below)
-export SLACK_USER_TOKEN="xoxp-your-token-here"
+# Configure tokens
+export SLACK_USER_TOKEN="xoxp-your-token"
+export DISCORD_BOT_TOKEN="your-discord-bot-token"
 
-# 2. Generate a ready-to-paste prompt for the last 24 hours (no provider)
-uvx --from git+https://github.com/dragoscirjan/the-automated-manager.git \
-  am slack-summary
+# Prompt-only mode (default)
+uvx --from git+https://github.com/dragoscirjan/the-automated-manager.git am slack-summary
+uvx --from git+https://github.com/dragoscirjan/the-automated-manager.git am discord-summary
 
-# 3. Or let an installed agent CLI write the summary for you
-uvx --from git+https://github.com/dragoscirjan/the-automated-manager.git \
-  am slack-summary --provider opencode
+# Run mode using an installed provider
+uvx --from git+https://github.com/dragoscirjan/the-automated-manager.git am slack-summary --provider opencode
+uvx --from git+https://github.com/dragoscirjan/the-automated-manager.git am discord-summary --provider opencode
 ```
 
----
+## Slack App Setup (User Token)
 
-## Creating a Slack App & User Token
+1. Create app at https://api.slack.com/apps
+2. In OAuth & Permissions -> User Token Scopes, add:
+   - channels:read
+   - groups:read
+   - im:read
+   - mpim:read
+   - channels:history
+   - groups:history
+   - im:history
+   - mpim:history
+   - users:read
+3. Install app to workspace and copy `xoxp-...` token
+4. Set `SLACK_USER_TOKEN`
 
-The tool needs a **user token** (`xoxp-`) so it can read every channel and DM
-_you_ can see. Bot tokens only see channels the bot is invited to, which is why
-a user token is required.
+## Discord App Setup (Bot Token)
 
-1. Go to **<https://api.slack.com/apps>** and click **Create New App** →
-   **From scratch**.
-2. Give it a name (e.g. _Automated Manager_) and pick your workspace.
-3. In the left sidebar, open **OAuth & Permissions**.
-4. Scroll to **Scopes → User Token Scopes** and add **all** of the following:
-
-   | Scope              | Why                               |
-   | ------------------ | --------------------------------- |
-   | `channels:read`    | List public channels              |
-   | `groups:read`      | List private channels             |
-   | `im:read`          | List direct messages              |
-   | `mpim:read`        | List group direct messages        |
-   | `channels:history` | Read public channel messages      |
-   | `groups:history`   | Read private channel messages     |
-   | `im:history`       | Read direct messages              |
-   | `mpim:history`     | Read group direct messages        |
-   | `users:read`       | Resolve user IDs to display names |
-
-5. Scroll back up and click **Install to Workspace**, then **Allow**.
-6. Copy the **User OAuth Token** — it starts with `xoxp-`. This is your
-   `SLACK_USER_TOKEN`.
-
-> **Keep this token secret.** It grants read access to everything you can see in
-> Slack. Store it in an environment variable or a `.env` file that is never
-> committed (this repo's `.gitignore` already excludes `.env`).
-
----
+1. Create app at https://discord.com/developers/applications
+2. Add a bot in the Bot tab
+3. Enable Message Content Intent
+4. Copy bot token and set `DISCORD_BOT_TOKEN`
+5. Invite bot with read permissions to target servers/channels
 
 ## Configuration
 
-Configuration is read from environment variables, optionally seeded by a `.env`
-file. The tool searches for `.env` by walking **up** from your current working
-directory, so you can keep a per-project `.env`.
-
-Create a `.env` next to where you run the tool:
+Configuration is loaded from environment or a `.env` discovered by walking up
+from current working directory.
 
 ```dotenv
-# Required: your Slack user OAuth token
-SLACK_USER_TOKEN=xoxp-your-token-here
-
-# Optional: default agent CLI provider (opencode | claude | pi | copilot).
-# If unset, the tool runs in prompt-only mode.
+SLACK_USER_TOKEN=xoxp-your-token
+DISCORD_BOT_TOKEN=your-discord-bot-token
 LLM_PROVIDER=opencode
-
-# Optional: model passed through to the agent CLI (provider-specific).
 LLM_MODEL=
-
-# Optional: IANA timezone used for timestamps and the period label.
-# Defaults to the system local timezone.
 AM_TIMEZONE=Europe/Bucharest
 ```
 
-| Variable           | Required | Description                                              |
-| ------------------ | -------- | -------------------------------------------------------- |
-| `SLACK_USER_TOKEN` | yes      | Slack user OAuth token (`xoxp-…`).                       |
-| `LLM_PROVIDER`     | no       | Default provider: `opencode`, `claude`, `pi`, `copilot`. |
-| `LLM_MODEL`        | no       | Model name forwarded to the agent CLI via `--model`.     |
-| `AM_TIMEZONE`      | no       | IANA timezone (e.g. `America/New_York`).                 |
+Token requirements are command-specific:
 
----
+- `am slack-summary` -> requires `SLACK_USER_TOKEN`
+- `am discord-summary` -> requires `DISCORD_BOT_TOKEN`
 
 ## Usage
 
 ```text
 am slack-summary [OPTIONS]
+am discord-summary [OPTIONS]
 
-Options:
-  -s, --since TEXT       Time window to summarize, as Nh or Nd (max 10 days).
-                         [default: 24h]
-  -p, --provider TEXT    Agent CLI to run: opencode | claude | pi | copilot.
-                         Overrides LLM_PROVIDER. If omitted and no env default,
-                         runs in prompt-only mode.
-  -o, --output PATH      Where to write the summary (run mode).
-                         [default: summaries/slack-<period>.md]
+Common options:
+  -s, --since TEXT       Nh or Nd, default 24h, max 10d
+  -p, --provider TEXT    opencode | claude | pi | copilot
+  -o, --output PATH      summary output path
+
+Discord-only:
+      --include TEXT     comma list: guild_text,thread,dm,group_dm
 ```
 
 Examples:
 
 ```bash
-# Last 24 hours, prompt-only (default)
-am slack-summary
-
-# Last 3 days, summarized by Claude Code
-am slack-summary --since 3d --provider claude
-
-# Last 12 hours to a custom file via OpenCode
-am slack-summary -s 12h -p opencode -o reports/today.md
+am slack-summary --since 3d
+am discord-summary --since 12h --include guild_text,thread
+am discord-summary --provider claude -o reports/discord.md
 ```
-
-### Two modes
-
-- **Prompt-only (default).** When no provider is set, the tool exports your
-  Slack data and writes a self-contained prompt to
-  `summaries/.slack-<period>.prompt.md`. Paste it into any assistant.
-- **Run mode.** With `--provider` (or `LLM_PROVIDER`), the tool inlines the
-  exported data into the prompt, runs the agent CLI, captures its output, and
-  writes the finished summary to the `--output` path.
-
-The time window accepts `Nh` (hours) or `Nd` (days), e.g. `24h`, `12h`, `7d`.
-The maximum span is **10 days**.
-
----
-
-## How It Works
-
-1. Resolve the time window and timezone.
-2. List every conversation you can see (public + private channels, DMs, and
-   group DMs), skipping archived and empty ones.
-3. Fetch messages and thread replies within the window, resolving user mentions
-   to display names. Rate limits are retried automatically.
-4. Render each conversation to Markdown under `slack/<period>/`.
-5. Either build a prompt (prompt-only) or run your chosen agent CLI and write
-   the summary (run mode).
-
----
 
 ## Output Layout
 
 ```text
 .
 ├── slack/
-│   └── 2026-06-29/                  # period label (single day or range)
-│       ├── channel-general.md
-│       ├── channel-incidents.md
-│       └── dm-jane-doe.md
+│   └── <period>/
+│       └── *.md
+├── discord/
+│   └── <period>/
+│       └── *.md
 └── summaries/
-    ├── slack-2026-06-29.md          # run mode: the finished summary
-    └── .slack-2026-06-29.prompt.md  # prompt-only mode: paste-ready prompt
+    ├── slack-<period>.md
+    ├── .slack-<period>.prompt.md
+    ├── discord-<period>.md
+    └── .discord-<period>.prompt.md
 ```
 
-The period label is `YYYY-MM-DD` for a single day, or
-`YYYY-MM-DD-YYYY-MM-DD` for a multi-day window.
-
----
+`<period>` is `YYYY-MM-DD` for single-day windows or
+`YYYY-MM-DD-YYYY-MM-DD` for ranges.
 
 ## Development
 
-See [CONTRIBUTING.md](./CONTRIBUTING.md) for the full developer workflow.
-
 ```bash
-# Install toolchain (mise: python, node, uv) and dependencies
 mise install
 mise exec -- uv sync
-
-# Run the test suite
-mise exec -- uv run pytest -q
-
-# Lint, format, build, test — the full gate
+npm install
 task validate
 ```
 
----
-
 ## License
 
-[MIT](./LICENSE) © Dragos Cirjan
+MIT
