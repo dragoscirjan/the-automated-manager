@@ -19,8 +19,6 @@ includes:
   quality:
     taskfile: .taskfiles/Taskfile.quality.yml
     internal: true
-  sync:
-    taskfile: .taskfiles/Taskfile.sync.yml
 
 tasks:
   # ==========================================================================
@@ -30,10 +28,7 @@ tasks:
   build:
     desc: 'Build project'
     summary: |
-      Build the project
-
-      For the generic template, this is a placeholder that echoes the
-      build environment. Override this in language-specific templates.
+      Build the Python distribution (sdist + wheel) into dist/.
 
       Examples:
         task build
@@ -42,13 +37,11 @@ tasks:
           echo "{{.__TF_HEADER_LINE}}"
           echo "Building for {{OS}}/{{ARCH}}"
           echo "{{.__TF_HEADER_LINE}}"
-      - task: common:print:env
-      - cmd: echo "This is bash, building is not necessary for scripts."
-        platforms: [darwin, linux]
-      - cmd: echo "This is PowerShell, building is not necessary for scripts."
-        platforms: [windows]
+      - cmd: |
+          {{.__TF_MISE_E}} uv build
     sources:
-      - src/**/*.{sh,ps1}
+      - src/**/*.py
+      - pyproject.toml
 
   # ==========================================================================
   # Clean Tasks
@@ -100,8 +93,6 @@ tasks:
     cmds:
       - task: quality:lint:eslint
       - task: quality:lint:pylint
-      - task: quality:lint:pwshlint
-      - task: quality:lint:shlint
       - cmd: echo "✅ Linting completed"
 
   lint:check:
@@ -109,8 +100,6 @@ tasks:
     cmds:
       - task: quality:lint:check:eslint
       - task: quality:lint:check:pylint
-      - task: quality:lint:check:pwshlint
-      - task: quality:lint:check:shlint
       - cmd: echo "✅ Linting check completed"
 
   lint-staged:
@@ -155,55 +144,32 @@ tasks:
         vars:
           CLI_ARGS: '{{.CLI_ARGS}}'
 
-  pwshlint_py:
-    desc: 'Run PSScriptAnalyzer via pwshlint.py'
-    cmds:
-      - task: quality:pwshlint_py
-        vars:
-          CLI_ARGS: '{{.CLI_ARGS}}'
-
-  shlint_py:
-    desc: 'Run ShellCheck via shlint.py'
-    cmds:
-      - task: quality:shlint_py
-        vars:
-          CLI_ARGS: '{{.CLI_ARGS}}'
-
   # ==========================================================================
   # Development Tools
   # ==========================================================================
 
   debug:
-    desc: 'Run application with debugger (gdb on Linux/macOS)'
+    desc: 'Run application (verbose)'
     summary: |
-      Run the application in debug mode
-
-      For the generic template, this builds first then shows
-      a placeholder message. Override in language-specific templates.
+      Run the CLI help as a secret-free smoke test.
 
       Examples:
         task debug
     cmds:
-      - task: build
-      - cmd: echo "Running (Debug mode)..."
+      - task: run
 
   run:
     desc: 'Run application'
     summary: |
-      Build and run the application
-
-      Runs the CLI script appropriate for the current platform.
+      Run the `am` CLI. With no extra args this prints --help,
+      which is a secret-free smoke test safe for CI.
 
       Examples:
         task run
-    deps:
-      - task: build
+        task run -- slack-summary --help
     cmds:
-      - cmd: bash src/cli.sh
-        platforms: [darwin, linux]
       - cmd: |
-          {{.__TF_MISE_E_PWSH_FILE}} src/cli.ps1
-        platforms: [windows]
+          {{.__TF_MISE_E_UV_RUN}} am {{.CLI_ARGS | default "--help"}}
 
   # ==========================================================================
   # Documentation Tasks
@@ -246,67 +212,25 @@ tasks:
   test:
     desc: 'Run tests'
     summary: |
-      Run all tests
-
-      Runs Bats tests (bash) on Unix and Pester tests (PowerShell)
-      on all platforms.
+      Run the pytest suite.
 
       Examples:
         task test
-    cmds:
-      - task: test:bats
-      - task: test:pester
-      - cmd: echo "All tests completed"
-
-  test:bats:
-    aliases: [test:bash]
-    desc: 'Run Bats tests for bash scripts'
-    summary: |
-      Run Bats tests for bash scripts
-
-      Runs .bats test files in the test/ directory.
-      Skipped on Windows (bash testing not supported).
-
-      Examples:
-        task test:bats
-        task test:bash
+        task test -- tests/timeparse_test.py
     cmds:
       - cmd: |
-          {{.__TF_MISE_E}} npx -y bats test/*.bats
-        platforms: [darwin, linux]
-      - cmd: |
-          echo "Skipping Bats tests on Windows (bash testing not supported)."
-        platforms: [windows]
-    silent: true
+          {{.__TF_MISE_E_UV_RUN}} pytest {{.CLI_ARGS}}
 
   test:gen-coverage:
     desc: 'Generate test coverage report'
     summary: |
-      Generate test coverage report
-
-      For the generic template, coverage is not implemented.
-      Override in language-specific templates.
+      Run pytest with coverage for the automated_manager package.
 
       Examples:
         task test:gen-coverage
     cmds:
-      - cmd: echo "Didn't include testing (and coverage) for bash/pwsh."
-    silent: true
-
-  test:pester:
-    aliases: [test:powershell, test:pwsh]
-    desc: 'Run Pester tests for PowerShell scripts'
-    summary: |
-      Run Pester tests for PowerShell scripts
-
-      Runs Pester test files in the test/ directory.
-
-      Examples:
-        task test:pester
-        task test:pwsh
-    cmds:
       - cmd: |
-          {{.__TF_MISE_E_PWSH_FILE}} .scripts/run-pester.ps1
+          {{.__TF_MISE_E_UV_RUN}} pytest --cov=automated_manager --cov-report=term-missing --cov-report=html
 
   # ==========================================================================
   # Utility Tasks
@@ -316,27 +240,6 @@ tasks:
     desc: 'Print current build environment variables'
     cmds:
       - task: common:print:env
-
-  pwsh:
-    desc: 'Run PowerShell scripts'
-    summary: |
-      Run a PowerShell command
-
-      Internal utility task for running PowerShell commands.
-
-      Variables:
-        CODE: PowerShell code to execute (default: "echo 'Hello from PowerShell!'")
-
-      Examples:
-        task pwsh CODE="Get-Date"
-    vars:
-      CODE: '{{.CODE | default "echo \"Hello from PowerShell!\""}}'
-    cmds:
-      - cmd: |
-          temp=$(mktemp)
-          echo $temp
-          # {{.__TF_MISE_E}} pwsh -Command "{{.CODE}}"
-    silent: true
 
   # ==========================================================================
   # Validation Tasks

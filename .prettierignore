@@ -16,6 +16,7 @@
 .prettierignore
 .PSScriptAnalyzerSettings.psd1
 .ruff_cache/
+.web_stash.db
 .shellcheckrc
 .venv/
 _uvx_install/
