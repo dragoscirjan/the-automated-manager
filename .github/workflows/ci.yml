@@ -32,7 +32,7 @@ jobs:
     name: Test Scaffold
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Install uv
         uses: astral-sh/setup-uv@v7
       - name: Test bootstrap help
@@ -90,7 +90,7 @@ jobs:
     steps:
       - name: Download version artifact
         continue-on-error: true
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: version-output
           path: version-output
